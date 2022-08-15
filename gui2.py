@@ -315,6 +315,7 @@ outputFolder = None
 
 tUpdate = time.time()
 tRecording = time.time()
+tVoltagechangeKeithley = time.time()
 while True:
     event, values = window.read(timeout=100)
     if event == "Exit" or event == sg.WIN_CLOSED:
@@ -385,6 +386,7 @@ while True:
             keithleyDwellIdx = 0
             KeithleyVoltages = [float(x) for x in values['KeithleyVoltages'].split(',')]
             KeithleyDwellTimes = [float(x) for x in values['KeithleyDwellTimes'].split(',')]
+            tVoltagechangeKeithley = time.time()
             print('Voltage sweep started')
         else:
             window['KeithleyVoltages'].Update(disabled=True)
