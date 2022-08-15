@@ -334,7 +334,8 @@ while True:
                     keithley.use_front_terminals()
                 keithley.measure_current()
                 keithley.enable_source()
-                print('Keithley setup correctly.')
+                window['VoltageKeithley'].Update(disabled=False)
+                print('Keithley connected.')
                 if cameraStarted:
                     window['StartLogging'].Update(disabled=False)
             except:
@@ -356,6 +357,8 @@ while True:
             window['KeithleyDeviceID'].Update(disabled=False)
             keithleyStarted = False
             window['StartLogging'].Update(disabled=True)
+            window['VoltageKeithley'].Update(disabled=True)
+            print('Keithley disconnected.')
 
     # if event == 'LogKeithley':
     #     if not keithleyRecording:
