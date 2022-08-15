@@ -1,0 +1,11 @@
+{
+  "fps_output": "1",
+  "ExposureTime": "5000",
+  "Gain": "10",
+  "ExperimentName": "test",
+  "KeithleyReadOutRate": "",
+  "KeithleyVoltages": "",
+  "KeithleyDwellTimes": "",
+  "FrontTerminals": true,
+  "KeithleyDeviceID": "USB0::0x05E6::0x2450::04456958::INSTR"
+}
