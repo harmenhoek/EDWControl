@@ -128,6 +128,11 @@ first_row = [
         sg.InputText(size=(10, 1), key='logging_rate')
     ],
     [
+        sg.Text("Image Folder"),
+        sg.In(size=(75, 1), enable_events=True, key="-FOLDER-"),
+        sg.FolderBrowse(),
+    ],
+    [
         sg.Button('Start image recording and logging', key='StartLogging', disabled=True),
     ],
     [
@@ -296,7 +301,6 @@ window = sg.Window("Electrodewetting Control", layout, finalize=True)
 SetInitialValues()
 
 updateInterval = 1
-outputFolder = 'recordings'
 
 cameraStarted = False
 recording = False
@@ -306,6 +310,8 @@ keithleyRamp = False
 setVoltage = 0
 
 loggingAll = False
+
+outputFolder = None
 
 tUpdate = time.time()
 tRecording = time.time()
@@ -410,7 +416,9 @@ while True:
 
 
 
-
+    if event == "-FOLDER-":
+        outputFolder = values["-FOLDER-"]
+        print(f"Folder {outputFolder} selected.")
 
 
     if event == "ApplySettings" and cameraStarted:
@@ -499,7 +507,7 @@ while True:
         if not loggingAll:
             logging_rate = float(values['logging_rate'])
             experimentName = values['ExperimentName']
-            filenameKeithley = f"Keithley_Logfile_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            filenameKeithley = os.path.join(outputFolder, f"Keithley_Logfile_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
             window['StartLogging'].Update('Stop logging')
             with open(filenameKeithley, 'w') as f:
                 f.write("datetimestamp image, datetimestamp keithley, current (A), voltage (V), set voltage (V)\n")
