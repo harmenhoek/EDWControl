@@ -10,7 +10,7 @@ import pyvisa
 
 
 # PyInstaller -F --onefile --noconsole -n EDWControl-0_1 .\gui2.p
-#  Pyinstaller .\EDWControl-0_1.spec
+# Pyinstaller .\EDWControl-0_1.spec
 
 version = 0.1
 
