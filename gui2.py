@@ -9,8 +9,8 @@ from pymeasure.instruments.keithley import Keithley2450
 import pyvisa
 
 
-# PyInstaller -F --onefile --noconsole -n EDWControl-0_1 .\gui2.p
 # Pyinstaller .\EDWControl-0_1.spec
+# Note the importance of hooks for Keithley + importing some underscore modules manually
 
 version = 0.1
 
