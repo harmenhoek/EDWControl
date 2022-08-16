@@ -7,6 +7,7 @@ from datetime import datetime
 import json
 from pymeasure.instruments.keithley import Keithley2450
 import pyvisa
+import sys
 
 
 # Pyinstaller .\EDWControl-0_1.spec
@@ -19,8 +20,8 @@ version = 0.2
 FIX:
 
 
- git lfs uninstall
- 
+git lfs uninstall
+git add .\dist\EDWControl-0_2.exe
  
 
 2022-08-11 Testing the delay
@@ -35,6 +36,12 @@ Thus the former method is implemented
 # sg.theme('BrownBlue')   # Add a touch of color
 sg.theme('DarkAmber')   # Add a touch of color
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
+
+icon_path = resource_path("EDWControl.ico")
 
 def image_resize(image, width=None, height=None, inter=cv2.INTER_AREA):
     # initialize the dimensions of the image to be resized and
@@ -242,6 +249,7 @@ def SetInitialValues():
     print('----- Electrodewetting Control -----')
     print('by Harmen Hoek')
     print(f"Version: {version} (https://github.com/harmenhoek/EDWControl)")
+    print(icon_path)
 
     try:
         with open('EDWControlSettings.json') as f:
@@ -269,7 +277,7 @@ settings = {
     'Gain': 0,
 }
 
-window = sg.Window("Electrodewetting Control", layout, finalize=True, icon='EDWControl.ico')
+window = sg.Window("Electrodewetting Control", layout, finalize=True, icon=icon_path)
 SetInitialValues()
 
 updateInterval = 1
