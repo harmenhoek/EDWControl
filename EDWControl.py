@@ -12,9 +12,16 @@ import pyvisa
 # Pyinstaller .\EDWControl-0_1.spec
 # Note the importance of hooks for Keithley + importing some underscore modules manually
 
-version = 0.1
+version = 0.2
 
 '''
+
+FIX:
+
+
+ git lfs uninstall
+ 
+ 
 
 2022-08-11 Testing the delay
 Recorded the screen with the external camera, where I printed the time continuously (py script in Prompt)
@@ -25,6 +32,7 @@ Thus the former method is implemented
 
 '''
 
+# sg.theme('BrownBlue')   # Add a touch of color
 sg.theme('DarkAmber')   # Add a touch of color
 
 
@@ -71,10 +79,6 @@ col1 = [
     [
         sg.HSeparator(),
     ],
-    # [
-    #     sg.Text('Recording framerate'),
-    #     sg.InputText(size=(10, 1), key='fps_output', disabled=True)
-    # ],
     [
         sg.Text('Exposuretime [ms]'),
         sg.InputText(size=(10, 1), key='ExposureTime', disabled=True),
@@ -90,18 +94,11 @@ col1 = [
     [
         sg.T('.tiff, no compression')
     ],
-
-    # [
-    #     sg.Button('Record', key='Record', disabled=True)
-    # ],
-
 ]
 
 
 col2 = [
     [
-        # sg.Image(key="-IMAGE-", size=(400, 400))
-
         sg.Image(key="-IMAGE-", size=(400, 300))
     ],
 ]
@@ -129,7 +126,7 @@ first_row = [
     ],
     [
         sg.Text("Image Folder"),
-        sg.In(size=(75, 1), enable_events=True, key="-FOLDER-"),
+        sg.In(size=(75, 1), enable_events=True, key="ExportFolder"),
         sg.FolderBrowse(),
     ],
     [
@@ -152,10 +149,6 @@ keithley_row = [
     [
         sg.Checkbox('Use front terminals', key='FrontTerminals')
     ],
-    # [
-    #     sg.Text('Readout rate'),
-    #     sg.InputText(size=(10, 1), key='KeithleyReadOutRate', disabled=True),
-    # ],
     [
         sg.Text('Voltage range (comma seperate)'),
         sg.InputText(size=(50, 1), key='KeithleyVoltages', disabled=True),
@@ -164,15 +157,6 @@ keithley_row = [
         sg.Text('Dwell times (comma seperate)'),
         sg.InputText(size=(50, 1), key='KeithleyDwellTimes', disabled=True),
     ],
-    # [
-    #     sg.Button('Apply settings', key='ApplySettingsKeithley', disabled=True),
-    # ],
-    # [
-    #     sg.HSeparator(),
-    # ],
-    # [
-    #     sg.Button('Start logging', key='LogKeithley', disabled=True),
-    # ],
 ]
 
 layout = [
@@ -240,16 +224,15 @@ def updateImage(camera):
 
 def SaveAsDefault():
     data = {
-        # 'fps_output': window["fps_output"].get(),
         'ExposureTime': window["ExposureTime"].get(),
         'Gain': window["Gain"].get(),
         'ExperimentName': window["ExperimentName"].get(),
-        # 'KeithleyReadOutRate': window["KeithleyReadOutRate"].get(),
         'KeithleyVoltages': window["KeithleyVoltages"].get(),
         'KeithleyDwellTimes': window["KeithleyDwellTimes"].get(),
         'FrontTerminals': window["FrontTerminals"].get(),
         'KeithleyDeviceID': window["KeithleyDeviceID"].get(),
         'logging_rate': window["logging_rate"].get(),
+        'ExportFolder': window["ExportFolder"].get(),
     }
     with open('EDWControlSettings.json', 'w') as f:
         json.dump(data, f, indent=2)
@@ -263,29 +246,19 @@ def SetInitialValues():
     try:
         with open('EDWControlSettings.json') as f:
             settings = json.load(f)
-            # window["fps_output"].update(settings['fps_output'])
             window["ExposureTime"].update(settings['ExposureTime'])
             window["Gain"].update(settings['Gain'])
             window["ExperimentName"].update(settings['ExperimentName'])
-            # window["KeithleyReadOutRate"].update(settings['KeithleyReadOutRate'])
             window["KeithleyVoltages"].update(settings['KeithleyVoltages'])
             window["KeithleyDwellTimes"].update(settings['KeithleyDwellTimes'])
             window["FrontTerminals"].update(settings['FrontTerminals'])
             window["KeithleyDeviceID"].update(settings['KeithleyDeviceID'])
             window["logging_rate"].update(settings['logging_rate'])
-
-
+            window["ExportFolder"].update(settings['ExportFolder'])
             print(f"{datetime.now().strftime('%H:%M:%S')} OK        Default settings loaded from 'EDWControlSettings.json'.")
-
     except:
         print(f"{datetime.now().strftime('%H:%M:%S')} WARNING   No default settings found. Press 'Set settings as default' to create default settings.")
 
-
-# def ReadOutToLogFile(filename, setvoltage):
-#     with open(filename, 'w') as f:
-#         datetimestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-#         print(f"{datetimestamp}, {keithley.current}, {keithley.voltage}, {setvoltage}")
-#         f.write(f"{datetimestamp}, {keithley.current}, {keithley.voltage}, {setvoltage}\n")
 
 def updateCameraSetting(camera, settings):
     camera.ExposureTime.SetValue(settings['ExposureTime'])
@@ -294,10 +267,9 @@ def updateCameraSetting(camera, settings):
 settings = {
     'ExposureTime': 100,
     'Gain': 0,
-    'fps_output': 1,
 }
 
-window = sg.Window("Electrodewetting Control", layout, finalize=True)
+window = sg.Window("Electrodewetting Control", layout, finalize=True, icon='EDWControl.ico')
 SetInitialValues()
 
 updateInterval = 1
@@ -307,7 +279,7 @@ recording = False
 keithleyStarted = False
 keithleyRecording = False
 keithleyRamp = False
-setVoltage = 0
+currentVoltage = 0
 
 loggingAll = False
 
@@ -317,8 +289,13 @@ tUpdate = time.time()
 tRecording = time.time()
 tVoltagechangeKeithley = time.time()
 while True:
-    event, values = window.read(timeout=100)
+    event, values = window.read(timeout=50)
     if event == "Exit" or event == sg.WIN_CLOSED:
+        if loggingAll:
+            print('Closing log file ...')
+            f.close()
+            print('Log file closed.')
+        print('Closing program now. Bye!')
         break
 
     if event == "StartKeithley":
@@ -327,9 +304,11 @@ while True:
             print('Checking available devices ...')
             rm = pyvisa.ResourceManager()  # should use Keysight by default
             print(f"Found devices: {rm.list_resources()}. Needs device {values['KeithleyDeviceID']}")
+            window.Refresh()
             try:
                 keithley = Keithley2450(values['KeithleyDeviceID'])
                 print('Connection successfull.')
+                window.Refresh()
                 keithley.reset()
                 if values['FrontTerminals']:
                     keithley.use_front_terminals()
@@ -337,107 +316,81 @@ while True:
                 keithley.enable_source()
                 window['VoltageKeithley'].Update(disabled=False)
                 print('Keithley connected.')
+                window.Refresh()
                 if cameraStarted:
                     window['StartLogging'].Update(disabled=False)
             except:
                 print("Unable to connect to the Keithley 2450.")
+                window.Refresh()
                 continue
-            # window['KeithleyReadOutRate'].Update(disabled=False)
             window['KeithleyVoltages'].Update(disabled=False)
             window['KeithleyDwellTimes'].Update(disabled=False)
-            # window['ApplySettingsKeithley'].Update(disabled=False)
             window['FrontTerminals'].Update(disabled=True)
             window['KeithleyDeviceID'].Update(disabled=True)
             keithleyStarted = True
         else:
-            # window['KeithleyReadOutRate'].Update(disabled=True)
             window['KeithleyVoltages'].Update(disabled=True)
             window['KeithleyDwellTimes'].Update(disabled=True)
-            # window['ApplySettingsKeithley'].Update(disabled=True)
             window['FrontTerminals'].Update(disabled=False)
             window['KeithleyDeviceID'].Update(disabled=False)
             keithleyStarted = False
             window['StartLogging'].Update(disabled=True)
             window['VoltageKeithley'].Update(disabled=True)
             print('Keithley disconnected.')
-
-    # if event == 'LogKeithley':
-    #     if not keithleyRecording:
-    #         filenameKeithley = f"Keithley_Logfile_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-    #         with open(filenameKeithley, 'w') as f:
-    #             f.write("datetimestamp, current (A), voltage (V), set voltage (V)\n")
-    #             print(f"Created log file '{filenameKeithley}'.")
-    #             tReadoutKeithley = time.time()
-    #             tVoltagechangeKeithley = time.time()
-    #         window['Record'].Update('Stop logging')
-    #         print('Logging started')
-    #         keithleyRecording = True
-    #     else:
-    #         window['Record'].Update('Start logging')
-    #         print('Logging stopped')
-    #         keithleyRecording = False
+            window.Refresh()
 
     if event == 'VoltageKeithley':
         if not keithleyRamp:
+            KeithleyVoltages = [float(x) for x in values['KeithleyVoltages'].split(',')]
+            KeithleyDwellTimes = [float(x) for x in values['KeithleyDwellTimes'].split(',')]
+            if len(KeithleyVoltages) is not len(KeithleyDwellTimes):
+                print('The number of voltages should equal the number of dwell times.')
+                continue
             window['KeithleyVoltages'].Update(disabled=False)
             window['KeithleyDwellTimes'].Update(disabled=False)
             window['VoltageKeithley'].Update('Stop voltage sweep')
             keithleyRamp = True
             keithleyDwellIdx = 0
-            KeithleyVoltages = [float(x) for x in values['KeithleyVoltages'].split(',')]
-            KeithleyDwellTimes = [float(x) for x in values['KeithleyDwellTimes'].split(',')]
+            currentDwellTime = 0  # make sure we start immediately
             tVoltagechangeKeithley = time.time()
             print('Voltage sweep started')
         else:
             window['KeithleyVoltages'].Update(disabled=True)
             window['KeithleyDwellTimes'].Update(disabled=True)
             window['VoltageKeithley'].Update('Start voltage sweep')
-            setVoltage = 0
+            currentVoltage = 0
             keithleyRamp = False
             print('Voltage sweep stopped')
 
-    # if keithleyRecording and time.time() - tReadoutKeithley > float(values['KeithleyReadOutRate']):
-    #     try:
-    #         ReadOutToLogFile(filenameKeithley, setVoltage)
-    #     except:
-    #         print('Logging to file failed ...')
-    #     tReadoutKeithley = time.time()
-
-    if keithleyRamp and time.time() - tVoltagechangeKeithley > KeithleyDwellTimes[keithleyDwellIdx]:
-        if keithleyDwellIdx < len(KeithleyVoltages):
-            setVoltage = KeithleyVoltages[keithleyDwellIdx]
-            print(f'Voltage set to {setVoltage}V.')
-            keithley.source_voltage = setVoltage
-            keithley.current
-            tVoltagechangeKeithley = time.time()
-            keithleyDwellIdx = keithleyDwellIdx + 1
-        else:
+    if keithleyRamp and time.time() - tVoltagechangeKeithley > currentDwellTime:
+        if keithleyDwellIdx > len(KeithleyVoltages):  # if this was already the last voltage, stop
             window['KeithleyVoltages'].Update(disabled=True)
             window['KeithleyDwellTimes'].Update(disabled=True)
             window['VoltageKeithley'].Update('Start voltage sweep')
             keithleyRamp = False
-            setVoltage = 0
+            currentVoltage = 0
             print('Voltage ramping ended')
+        currentVoltage = KeithleyVoltages[keithleyDwellIdx]
+        currentDwellTime = KeithleyDwellTimes[keithleyDwellIdx]
+        print(f'Voltage set to {currentVoltage}V.')
+        keithley.source_voltage = currentVoltage
+        keithley.current
+        tVoltagechangeKeithley = time.time()
+        keithleyDwellIdx = keithleyDwellIdx + 1
 
-
-
-    if event == "-FOLDER-":
-        outputFolder = values["-FOLDER-"]
+    if event == "ExportFolder":
+        outputFolder = values["ExportFolder"]
         print(f"Folder {outputFolder} selected.")
-
 
     if event == "ApplySettings" and cameraStarted:
         print(f"Setting new camera settings ...")
-
         settings['ExposureTime'] = int(values['ExposureTime'])
         settings['Gain'] = int(values['Gain'])
-
+        window.Refresh()
         updateCameraSetting(camera, settings)
 
     if event == 'MaxExposureTime':
-        # window['ExposureTime'].Update(int(values['fps_output'])*1000)
         window['ExposureTime'].Update(int(values['logging_rate'])*1000)
-
 
     if event == 'Set settings as default':
         SaveAsDefault()
@@ -448,17 +401,17 @@ while True:
                 camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
                 camera.Open()
                 print("Using device ", camera.GetDeviceInfo().GetModelName())
+                window.Refresh()
                 updateImage(camera)
                 window['StartCamera'].Update('Stop camera')
                 cameraStarted = True
-                # window['Record'].Update(disabled=False)
                 window['ApplySettings'].Update(disabled=False)
                 window['ExposureTime'].Update(disabled=False)
                 window['MaxExposureTime'].Update(disabled=False)
                 window['Gain'].Update(disabled=False)
-                # window['fps_output'].Update(disabled=False)
                 window['ExperimentName'].Update(disabled=False)
                 print('Camera started')
+                window.Refresh()
                 if keithleyStarted:
                     window['StartLogging'].Update(disabled=False)
             except Exception as err:
@@ -466,42 +419,15 @@ while True:
         else:
             camera.Close()
             cameraStarted = False
-            # window['Record'].Update(disabled=True)
             window['ApplySettings'].Update(disabled=True)
             window['ExposureTime'].Update(disabled=True)
             window['MaxExposureTime'].Update(disabled=True)
             window['Gain'].Update(disabled=True)
-            # window['fps_output'].Update(disabled=True)
             window['ExperimentName'].Update(disabled=True)
             window['StartCamera'].Update('Start camera')
             print('Camera stopped')
+            window.Refresh()
             window['StartLogging'].Update(disabled=True)
-
-    # if event == 'Record':
-    #     if not recording:
-    #         settings['fps_output'] = float(values['fps_output'])
-    #         window['Record'].Update('Stop recording')
-    #         recording = True
-    #         fps_output = float(values['fps_output'])
-    #         experimentName = values['ExperimentName']
-    #         print('Recording now ...')
-    #     else:
-    #         recording = False
-    #         window['Record'].Update('Record')
-    #         print('Recoding stopped')
-
-
-
-    # if recording and time.time() - tRecording > fps_output:
-    #     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
-    #     filename = os.path.join(outputFolder, f"{experimentName}_{timestamp}.tiff")
-    #     img = pylon.PylonImage()
-    #     camera.StartGrabbing()
-    #     with camera.RetrieveResult(2000) as result:
-    #         img.AttachGrabResultBuffer(result)
-    #         img.Save(pylon.ImageFileFormat_Tiff, filename)
-    #         img.Release()
-    #     camera.StopGrabbing()
 
     if cameraStarted and time.time() - tUpdate > updateInterval:
         updateImage(camera)
@@ -514,15 +440,17 @@ while True:
             experimentName = values['ExperimentName']
             filenameKeithley = os.path.join(outputFolder, f"Keithley_Logfile_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
             window['StartLogging'].Update('Stop logging')
-            with open(filenameKeithley, 'w') as f:
-                f.write("datetimestamp image, datetimestamp keithley, current (A), voltage (V), set voltage (V)\n")
+            f = open(filenameKeithley, 'w')
+            f.write("datetimestamp image, datetimestamp keithley, current (A), voltage (V), set voltage (V)\n")
             print(f"Created log file '{filenameKeithley}'.")
             tLogging = time.time()
             loggingAll = True
             print('Logging started')
+            window.Refresh()
         else:
             window['StartLogging'].Update('Start logging')
             loggingAll = False
+            f.close()
             print('Logging stopped')
 
     if loggingAll and time.time() - tLogging > logging_rate:
@@ -536,10 +464,9 @@ while True:
             img.Release()
         camera.StopGrabbing()
 
-        with open(filenameKeithley, 'w') as f:
-            timestamp2 = datetime.now().strftime('%Y%m%d_%H%M%S_%f')  # redo, so more accurate in log file
-            print(f"{timestamp1}, {timestamp2}, {keithley.current}, {keithley.voltage}, {setVoltage}")
-            f.write(f"{timestamp1}, {timestamp2}, {keithley.current}, {keithley.voltage}, {setVoltage}\n")
+        timestamp2 = datetime.now().strftime('%Y%m%d_%H%M%S_%f')  # redo, so more accurate in log file
+        print(f"{timestamp1}, {timestamp2}, {keithley.current}, {keithley.voltage}, {currentVoltage}")
+        f.write(f"{timestamp1}, {timestamp2}, {keithley.current}, {keithley.voltage}, {currentVoltage}\n")
 
         tLogging = time.time()
 
