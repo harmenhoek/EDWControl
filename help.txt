@@ -1,0 +1,22 @@
+EDWControl is a program that allows to take images with a Basler camera, log the current of a Keithley 2450 and sweep the voltage all at the same time and synchronized.
+
+--- TO GET STARTED ---
+To get started, make sure the correct drivers for the camera and Keithley are installed (see Github).
+Connect the Camera by pressing 'Start Camera'. Connect the Keithley2450 by pressing 'Connect Keithley2450'. Select 'Use front terminals' if preferred before connecting the Keithley.
+Enter a 'Experiment name', 'Logging rate' (suggested >=1Hz) and select an 'Image Folder' for saving the data.
+
+--- DATA LOGGING ---
+To start logging press 'Start image recording and logging' (only possible after connecting both camera and Keithley). This writes an image (max resolution, uncompressed TIFF) to a file at the same time as logging the current from the Keithley. There is a small delay of about 15ms between the image capture and timestamp generation (in filename), the timestamp generation happens after image capture. The time difference between image recording and current logging can be calculated from the Keithley log file where both timestamps are saved.
+Make sure to stop the logging properly by pressing 'Stop logging' or 'Exit' to prevent a corrupt file.
+
+--- CAMERA SETTINGS ---
+Camera exposure and gain can be set and applied by pressing 'Apply settings'.
+
+--- VOLTAGE SWEEP ---
+If the Keithley is connected, a voltage sweep can be performed. Enter the 'Voltage range' and 'Dwell times' seperated by commas. For example:
+Voltage range --> 1,2,3,4
+Dwell times --> 2,2,2,2
+Will result in 4 voltage steps of 1,2,3 and 4 volts, each lasting 2 seconds. After the sweep, the voltage is set to zero. The set voltage is also logged to the logfile.
+
+--- SAVE SETTINGS ---
+To set the current settings as default, press 'Set settings as default'. The next time you run the program these settings will be pre-set.

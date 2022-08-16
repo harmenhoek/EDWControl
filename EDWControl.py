@@ -10,10 +10,13 @@ import pyvisa
 import sys
 
 
-# Pyinstaller .\EDWControl-0_1.spec
+# Pyinstaller .\EDWControl.spec
 # Note the importance of hooks for Keithley + importing some underscore modules manually
 
-version = 0.2
+VERSION = 0.3
+BUILD_DATE = '2022-08-16 12:30'
+AUTHOR = 'Harmen Hoek'
+GITHUB = 'github.com/harmenhoek/EDWControl'
 
 '''
 
@@ -121,7 +124,7 @@ output_row = [
 
 first_row = [
     [
-        sg.T('Electrodewetting Control', font='_ 18', justification='c', expand_x=True),
+        sg.T(f'Electrodewetting Control', font='_ 18', justification='c', expand_x=True),
     ],
     [
         sg.Text('Experiment name'),
@@ -191,9 +194,13 @@ layout = [
         output_row,
     ],
     [
+        sg.Button('Help'),
         sg.Push(),
         sg.Button('Set settings as default'),
         sg.Button('Exit'),
+    ],
+[
+        sg.T(f'{AUTHOR} | Version {VERSION} | Build {BUILD_DATE} | {GITHUB}', font='_ 8', justification='c', expand_x=True),
     ],
 
 ]
@@ -247,9 +254,10 @@ def SaveAsDefault():
 
 def SetInitialValues():
     print('----- Electrodewetting Control -----')
-    print('by Harmen Hoek')
-    print(f"Version: {version} (https://github.com/harmenhoek/EDWControl)")
-    print(icon_path)
+    print(f'by {AUTHOR}')
+    print(f"Version: {VERSION} ({GITHUB})")
+    print(f"Build date: {BUILD_DATE}")
+    print('\n')
 
     try:
         with open('EDWControlSettings.json') as f:
@@ -277,7 +285,7 @@ settings = {
     'Gain': 0,
 }
 
-window = sg.Window("Electrodewetting Control", layout, finalize=True, icon=icon_path)
+window = sg.Window(f"Electrodewetting Control {VERSION}", layout, finalize=True, icon=icon_path)
 SetInitialValues()
 
 updateInterval = 1
@@ -291,7 +299,7 @@ currentVoltage = 0
 
 loggingAll = False
 
-outputFolder = None
+outputFolder = window["ExportFolder"].get()
 
 tUpdate = time.time()
 tRecording = time.time()
@@ -378,13 +386,14 @@ while True:
             keithleyRamp = False
             currentVoltage = 0
             print('Voltage ramping ended')
-        currentVoltage = KeithleyVoltages[keithleyDwellIdx]
-        currentDwellTime = KeithleyDwellTimes[keithleyDwellIdx]
-        print(f'Voltage set to {currentVoltage}V.')
-        keithley.source_voltage = currentVoltage
-        keithley.current
-        tVoltagechangeKeithley = time.time()
-        keithleyDwellIdx = keithleyDwellIdx + 1
+        else:
+            currentVoltage = KeithleyVoltages[keithleyDwellIdx]
+            currentDwellTime = KeithleyDwellTimes[keithleyDwellIdx]
+            print(f'Voltage set to {currentVoltage}V.')
+            keithley.source_voltage = currentVoltage
+            keithley.current
+            tVoltagechangeKeithley = time.time()
+            keithleyDwellIdx = keithleyDwellIdx + 1
 
     if event == "ExportFolder":
         outputFolder = values["ExportFolder"]
@@ -444,6 +453,9 @@ while True:
 
     if event == 'StartLogging':
         if not loggingAll:
+            if not outputFolder:
+                print('Select an output folder first')
+                continue
             logging_rate = float(values['logging_rate'])
             experimentName = values['ExperimentName']
             filenameKeithley = os.path.join(outputFolder, f"Keithley_Logfile_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
@@ -478,4 +490,7 @@ while True:
 
         tLogging = time.time()
 
-
+    if event == 'Help':
+        with open('help.txt', 'r') as f:
+            helpText = f.read()
+        sg.popup_ok(helpText, keep_on_top=True, title="EDWControl help", line_width=100)
