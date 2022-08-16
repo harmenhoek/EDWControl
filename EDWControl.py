@@ -13,19 +13,12 @@ import sys
 # Pyinstaller .\EDWControl.spec
 # Note the importance of hooks for Keithley + importing some underscore modules manually
 
-VERSION = 0.3
-BUILD_DATE = '2022-08-16 12:30'
+VERSION = 0.4
+BUILD_DATE = '2022-08-16 16:10'
 AUTHOR = 'Harmen Hoek'
 GITHUB = 'github.com/harmenhoek/EDWControl'
 
 '''
-
-FIX:
-
-
-git lfs uninstall
-git add .\dist\EDWControl-0_2.exe
- 
 
 2022-08-11 Testing the delay
 Recorded the screen with the external camera, where I printed the time continuously (py script in Prompt)
@@ -45,6 +38,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 icon_path = resource_path("EDWControl.ico")
+helpfile_path = resource_path("help.txt")
 
 def image_resize(image, width=None, height=None, inter=cv2.INTER_AREA):
     # initialize the dimensions of the image to be resized and
@@ -379,7 +373,7 @@ while True:
             print('Voltage sweep stopped')
 
     if keithleyRamp and time.time() - tVoltagechangeKeithley > currentDwellTime:
-        if keithleyDwellIdx > len(KeithleyVoltages):  # if this was already the last voltage, stop
+        if keithleyDwellIdx >= len(KeithleyVoltages):  # if this was already the last voltage, stop
             window['KeithleyVoltages'].Update(disabled=True)
             window['KeithleyDwellTimes'].Update(disabled=True)
             window['VoltageKeithley'].Update('Start voltage sweep')
@@ -491,6 +485,6 @@ while True:
         tLogging = time.time()
 
     if event == 'Help':
-        with open('help.txt', 'r') as f:
+        with open(helpfile_path, 'r') as f:
             helpText = f.read()
         sg.popup_ok(helpText, keep_on_top=True, title="EDWControl help", line_width=100)
