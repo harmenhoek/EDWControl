@@ -1,5 +1,10 @@
 # EDWControl
 
+Latest dist available here: https://surfdrive.surf.nl/files/index.php/s/fgfWd1auxaa7L1m
+
+
+
+
  This program allows to take images with a Basler camera, log the current of a Keithley 2450 and sweep the voltage all at the same time and synchronized.<br>
 ## To get started
 Install the following external packages:
