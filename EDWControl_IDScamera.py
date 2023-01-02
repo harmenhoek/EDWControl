@@ -13,8 +13,8 @@ import sys
 # Pyinstaller .\EDWControl.spec
 # Note the importance of hooks for Keithley + importing some underscore modules manually
 
-VERSION = 0.6
-BUILD_DATE = '2022-01-02 10:53'
+VERSION = 0.5
+BUILD_DATE = '2022-12-01 13:05'
 AUTHOR = 'Harmen Hoek'
 GITHUB = 'github.com/harmenhoek/EDWControl'
 
@@ -134,10 +134,6 @@ first_row = [
         sg.FolderBrowse(),
     ],
     [
-        sg.Text("Image saving format"),
-        sg.Combo(['TIFF', 'JPEG 100', 'JPEG 80', 'JPEG 50', 'PNG'], enable_events=True, key='SavingFormat'),
-    ],
-    [
         sg.Button('Start image recording and logging', key='StartLogging', disabled=True),
     ],
     [
@@ -245,7 +241,6 @@ def SaveAsDefault():
         'KeithleyDeviceID': window["KeithleyDeviceID"].get(),
         'logging_rate': window["logging_rate"].get(),
         'ExportFolder': window["ExportFolder"].get(),
-        'SavingFormat': window["SavingFormat"].get(),
     }
     with open('EDWControlSettings.json', 'w') as f:
         json.dump(data, f, indent=2)
@@ -270,7 +265,6 @@ def SetInitialValues():
             window["KeithleyDeviceID"].update(settings['KeithleyDeviceID'])
             window["logging_rate"].update(settings['logging_rate'])
             window["ExportFolder"].update(settings['ExportFolder'])
-            window["SavingFormat"].update(settings['SavingFormat'])
             print(f"{datetime.now().strftime('%H:%M:%S')} OK        Default settings loaded from 'EDWControlSettings.json'.")
     except:
         print(f"{datetime.now().strftime('%H:%M:%S')} WARNING   No default settings found. Press 'Set settings as default' to create default settings.")
@@ -362,8 +356,8 @@ while True:
             if len(KeithleyVoltages) is not len(KeithleyDwellTimes):
                 print('The number of voltages should equal the number of dwell times.')
                 continue
-            window['KeithleyVoltages'].Update(disabled=True)
-            window['KeithleyDwellTimes'].Update(disabled=True)
+            window['KeithleyVoltages'].Update(disabled=False)
+            window['KeithleyDwellTimes'].Update(disabled=False)
             window['VoltageKeithley'].Update('Stop voltage sweep')
             keithleyRamp = True
             keithleyDwellIdx = 0
@@ -371,27 +365,25 @@ while True:
             tVoltagechangeKeithley = time.time()
             print('Voltage sweep started')
         else:
-            window['KeithleyVoltages'].Update(disabled=False)
-            window['KeithleyDwellTimes'].Update(disabled=False)
+            window['KeithleyVoltages'].Update(disabled=True)
+            window['KeithleyDwellTimes'].Update(disabled=True)
             window['VoltageKeithley'].Update('Start voltage sweep')
             currentVoltage = 0
-            keithley.source_voltage = 0
             keithleyRamp = False
             print('Voltage sweep stopped')
 
     if keithleyRamp and time.time() - tVoltagechangeKeithley > currentDwellTime:
         if keithleyDwellIdx >= len(KeithleyVoltages):  # if this was already the last voltage, stop
-            window['KeithleyVoltages'].Update(disabled=False)
-            window['KeithleyDwellTimes'].Update(disabled=False)
+            window['KeithleyVoltages'].Update(disabled=True)
+            window['KeithleyDwellTimes'].Update(disabled=True)
             window['VoltageKeithley'].Update('Start voltage sweep')
             keithleyRamp = False
             currentVoltage = 0
-            keithley.source_voltage = 0
             print('Voltage ramping ended')
         else:
             currentVoltage = KeithleyVoltages[keithleyDwellIdx]
             currentDwellTime = KeithleyDwellTimes[keithleyDwellIdx]
-            print(f'{keithleyDwellIdx}/{len(KeithleyVoltages)} -  Voltage set to {currentVoltage}V.')
+            print(f'Voltage set to {currentVoltage}V.')
             keithley.source_voltage = currentVoltage
             keithley.current
             tVoltagechangeKeithley = time.time()
@@ -482,22 +474,7 @@ while True:
         camera.StartGrabbing()
         with camera.RetrieveResult(2000) as result:
             img.AttachGrabResultBuffer(result)
-            if values['SavingFormat'] == 'TIFF':
-                img.Save(pylon.ImageFileFormat_Tiff, os.path.join(outputFolder, f"{experimentName}_{timestamp1}.tiff"))
-            elif values['SavingFormat'] == 'JPEG 100':
-                ipo = pylon.ImagePersistenceOptions()
-                ipo.SetQuality(100)
-                img.Save(pylon.ImageFileFormat_Jpeg, os.path.join(outputFolder, f"{experimentName}_{timestamp1}.jpeg"), ipo)
-            elif values['SavingFormat'] == 'JPEG 80':
-                ipo = pylon.ImagePersistenceOptions()
-                ipo.SetQuality(80)
-                img.Save(pylon.ImageFileFormat_Jpeg, os.path.join(outputFolder, f"{experimentName}_{timestamp1}.jpeg"), ipo)
-            elif values['SavingFormat'] == 'JPEG 50':
-                ipo = pylon.ImagePersistenceOptions()
-                ipo.SetQuality(50)
-                img.Save(pylon.ImageFileFormat_Jpeg, os.path.join(outputFolder, f"{experimentName}_{timestamp1}.jpeg"), ipo)
-            elif values['SavingFormat'] == 'PNG':
-                img.Save(pylon.ImageFileFormat_Png, os.path.join(outputFolder, f"{experimentName}_{timestamp1}.png"))
+            img.Save(pylon.ImageFileFormat_Tiff, os.path.join(outputFolder, f"{experimentName}_{timestamp1}.tiff"))
             img.Release()
         camera.StopGrabbing()
 
