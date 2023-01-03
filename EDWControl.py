@@ -13,8 +13,8 @@ import sys
 # Pyinstaller .\EDWControl.spec
 # Note the importance of hooks for Keithley + importing some underscore modules manually
 
-VERSION = 0.6
-BUILD_DATE = '2022-01-03 12:14'
+VERSION = 0.7
+BUILD_DATE = '2023-01-03 12:56'
 AUTHOR = 'Harmen Hoek'
 GITHUB = 'github.com/harmenhoek/EDWControl'
 
@@ -78,7 +78,7 @@ col1 = [
         sg.T('Basler camera control', font='_ 14', justification='c', expand_x=True),
     ],
     [
-        sg.Button('Start Camera', key='StartCamera'),
+        sg.Button('Connect Camera', key='StartCamera'),
     ],
     [
         sg.HSeparator(),
@@ -90,17 +90,19 @@ col1 = [
     ],
     [
         sg.Text('Gain'),
-        sg.InputText(size=(10, 1), key='Gain', disabled=True)
-    ],
-    [
+        sg.InputText(size=(10, 1), key='Gain', disabled=True),
         sg.Button('Apply settings', key='ApplySettings', disabled=True),
     ],
+    [
+        sg.Text("Image saving format"),
+        sg.Combo(['TIFF', 'JPEG 100', 'JPEG 80', 'JPEG 50', 'PNG'], enable_events=True, key='SavingFormat'),
+    ]
 ]
 
 
 col2 = [
     [
-        sg.Image(key="-IMAGE-", size=(600, 500))
+        sg.Image(key="-IMAGE-", size=(950, 600)),
     ],
 ]
 
@@ -109,14 +111,14 @@ output_row = [
         sg.T('Output', font='_ 14', justification='c', expand_x=True),
     ],
     [
-        sg.Output(s=(120, 10), key='outputbox'),
+        sg.Output(s=(140, 8), key='outputbox'),
     ],
 ]
 
 first_row = [
-    [
-        sg.T(f'Electrodewetting Control', font='_ 18', justification='c', expand_x=True),
-    ],
+    # [
+    #     sg.T(f'Electrodewetting Control', font='_ 18', justification='c', expand_x=True),
+    # ],
     [
         sg.Text("Image Folder"),
         sg.In(size=(75, 1), enable_events=True, key="ExportFolder"),
@@ -124,14 +126,10 @@ first_row = [
     ],
     [
         sg.Text('Experiment name'),
-        sg.InputText(size=(50, 1), key='ExperimentName', disabled=True)
-    ],
-    [
+        sg.InputText(size=(50, 1), key='ExperimentName', disabled=True),
+        sg.VSeparator(),
         sg.Text('Logging rate [Hz]'),
         sg.InputText(size=(10, 1), key='logging_rate'),
-        sg.VSeparator(),
-        sg.Text("Image saving format"),
-        sg.Combo(['TIFF', 'JPEG 100', 'JPEG 80', 'JPEG 50', 'PNG'], enable_events=True, key='SavingFormat'),
     ],
 ]
 
@@ -160,17 +158,13 @@ keithley_row = [
 measurement_row = [
     [
         sg.Button('Start image recording and logging', key='StartLogging', disabled=True),
-        sg.Button('Start voltage sweep', key='VoltageKeithley', disabled=True),
     ],
+    [
+        sg.Button('Start voltage sweep', key='VoltageKeithley', disabled=True),
+    ]
 ]
 
 layout = [
-    [
-        first_row
-    ],
-    [
-        sg.HSeparator(),
-    ],
     [
         sg.Column(col2, element_justification='c')
     ],
@@ -186,6 +180,8 @@ layout = [
         sg.HSeparator(),
     ],
     [
+        sg.Column(first_row),
+        sg.VSeparator(),
         sg.Column(measurement_row, justification='c'),
     ],
     [
@@ -224,7 +220,7 @@ def updateImage(camera):
 
             image = converter.Convert(grabResult)
             img = image.GetArray()
-            img = image_resize(img, width=400)
+            img = image_resize(img, width=950)
             imgbytes = cv2.imencode('.png', img)[1].tobytes()  # ditto
 
             window['-IMAGE-'].update(data=imgbytes)
@@ -288,7 +284,7 @@ settings = {
     'Gain': 0,
 }
 
-window = sg.Window(f"Electrodewetting Control {VERSION}", layout, finalize=True, icon=icon_path)
+window = sg.Window(f"Electrodewetting Control {VERSION}", layout, finalize=True, icon=icon_path, grab_anywhere=True)
 SetInitialValues()
 
 updateInterval = 1
@@ -425,7 +421,7 @@ while True:
                 print("Using device ", camera.GetDeviceInfo().GetModelName())
                 window.Refresh()
                 updateImage(camera)
-                window['StartCamera'].Update('Stop camera')
+                window['StartCamera'].Update('Disconnect camera')
                 cameraStarted = True
                 window['ApplySettings'].Update(disabled=False)
                 window['ExposureTime'].Update(disabled=False)
