@@ -14,7 +14,7 @@ import sys
 # Note the importance of hooks for Keithley + importing some underscore modules manually
 
 VERSION = 0.6
-BUILD_DATE = '2022-01-02 10:53'
+BUILD_DATE = '2022-01-03 12:14'
 AUTHOR = 'Harmen Hoek'
 GITHUB = 'github.com/harmenhoek/EDWControl'
 
@@ -95,15 +95,12 @@ col1 = [
     [
         sg.Button('Apply settings', key='ApplySettings', disabled=True),
     ],
-    [
-        sg.T('.tiff, no compression')
-    ],
 ]
 
 
 col2 = [
     [
-        sg.Image(key="-IMAGE-", size=(400, 300))
+        sg.Image(key="-IMAGE-", size=(600, 500))
     ],
 ]
 
@@ -112,7 +109,7 @@ output_row = [
         sg.T('Output', font='_ 14', justification='c', expand_x=True),
     ],
     [
-        sg.Output(s=(100, 15), key='outputbox'),
+        sg.Output(s=(120, 10), key='outputbox'),
     ],
 ]
 
@@ -121,28 +118,21 @@ first_row = [
         sg.T(f'Electrodewetting Control', font='_ 18', justification='c', expand_x=True),
     ],
     [
-        sg.Text('Experiment name'),
-        sg.InputText(size=(50, 1), key='ExperimentName', disabled=True)
-    ],
-    [
-        sg.Text('Logging rate [Hz]'),
-        sg.InputText(size=(10, 1), key='logging_rate')
-    ],
-    [
         sg.Text("Image Folder"),
         sg.In(size=(75, 1), enable_events=True, key="ExportFolder"),
         sg.FolderBrowse(),
     ],
     [
+        sg.Text('Experiment name'),
+        sg.InputText(size=(50, 1), key='ExperimentName', disabled=True)
+    ],
+    [
+        sg.Text('Logging rate [Hz]'),
+        sg.InputText(size=(10, 1), key='logging_rate'),
+        sg.VSeparator(),
         sg.Text("Image saving format"),
         sg.Combo(['TIFF', 'JPEG 100', 'JPEG 80', 'JPEG 50', 'PNG'], enable_events=True, key='SavingFormat'),
     ],
-    [
-        sg.Button('Start image recording and logging', key='StartLogging', disabled=True),
-    ],
-    [
-        sg.Button('Start voltage sweep', key='VoltageKeithley', disabled=True)
-    ]
 ]
 
 keithley_row = [
@@ -167,6 +157,13 @@ keithley_row = [
     ],
 ]
 
+measurement_row = [
+    [
+        sg.Button('Start image recording and logging', key='StartLogging', disabled=True),
+        sg.Button('Start voltage sweep', key='VoltageKeithley', disabled=True),
+    ],
+]
+
 layout = [
     [
         first_row
@@ -175,15 +172,21 @@ layout = [
         sg.HSeparator(),
     ],
     [
-        sg.Column(col1, element_justification='c', vertical_alignment='top'),
-        sg.VSeparator(),
         sg.Column(col2, element_justification='c')
     ],
     [
         sg.HSeparator(),
     ],
     [
-        keithley_row
+        sg.Column(col1),
+        sg.VSeparator(),
+        sg.Column(keithley_row)
+    ],
+    [
+        sg.HSeparator(),
+    ],
+    [
+        sg.Column(measurement_row, justification='c'),
     ],
     [
         sg.HSeparator(),
@@ -443,7 +446,7 @@ while True:
             window['MaxExposureTime'].Update(disabled=True)
             window['Gain'].Update(disabled=True)
             window['ExperimentName'].Update(disabled=True)
-            window['StartCamera'].Update('Start camera')
+            window['StartCamera'].Update('Connect camera')
             print('Camera stopped')
             window.Refresh()
             window['StartLogging'].Update(disabled=True)
