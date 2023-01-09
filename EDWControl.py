@@ -13,10 +13,11 @@ import sys
 # Pyinstaller .\EDWControl.spec
 # Note the importance of hooks for Keithley + importing some underscore modules manually
 
-VERSION = 0.7
-BUILD_DATE = '2023-01-03 12:56'
+VERSION = 0.9
+BUILD_DATE = 'XXX'
 AUTHOR = 'Harmen Hoek'
 GITHUB = 'github.com/harmenhoek/EDWControl'
+DEMO_MODE = True
 
 '''
 
@@ -29,8 +30,8 @@ Thus the former method is implemented
 
 '''
 
-# sg.theme('BrownBlue')   # Add a touch of color
-sg.theme('DarkAmber')   # Add a touch of color
+sg.theme('BrownBlue')   # Add a touch of color
+# sg.theme('DarkAmber')   # Add a touch of color
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -75,10 +76,13 @@ def image_resize(image, width=None, height=None, inter=cv2.INTER_AREA):
 
 col1 = [
     [
-        sg.T('Basler camera control', font='_ 14', justification='c', expand_x=True),
+        sg.Push(),
+        sg.Button('Connect Camera', key='StartCamera'),
+        sg.Push(),
     ],
     [
-        sg.Button('Connect Camera', key='StartCamera'),
+        sg.Text("Image saving format"),
+        sg.Combo(['TIFF', 'JPEG 100', 'JPEG 80', 'JPEG 50', 'PNG'], enable_events=True, key='SavingFormat'),
     ],
     [
         sg.HSeparator(),
@@ -91,115 +95,150 @@ col1 = [
     [
         sg.Text('Gain'),
         sg.InputText(size=(10, 1), key='Gain', disabled=True),
-        sg.Button('Apply settings', key='ApplySettings', disabled=True),
     ],
     [
-        sg.Text("Image saving format"),
-        sg.Combo(['TIFF', 'JPEG 100', 'JPEG 80', 'JPEG 50', 'PNG'], enable_events=True, key='SavingFormat'),
-    ]
+        sg.Push(),
+        sg.Button('Apply settings', key='ApplySettings', disabled=True),
+        sg.Push(),
+    ],
 ]
 
 
 col2 = [
     [
-        sg.Image(key="-IMAGE-", size=(950, 600)),
+        sg.Image(key="-IMAGE-"),
     ],
 ]
 
 output_row = [
     [
-        sg.T('Output', font='_ 14', justification='c', expand_x=True),
-    ],
-    [
-        sg.Output(s=(140, 8), key='outputbox'),
+        sg.Output(s=(160, 8), key='outputbox'),
     ],
 ]
 
 first_row = [
-    # [
-    #     sg.T(f'Electrodewetting Control', font='_ 18', justification='c', expand_x=True),
-    # ],
     [
-        sg.Text("Image Folder"),
-        sg.In(size=(75, 1), enable_events=True, key="ExportFolder"),
-        sg.FolderBrowse(),
+        sg.Text("Root Save Folder"),
     ],
     [
-        sg.Text('Experiment name'),
-        sg.InputText(size=(50, 1), key='ExperimentName', disabled=True),
-        sg.VSeparator(),
+        sg.In(size=(30, 1), enable_events=True, key="ExportFolder"),
+        sg.FolderBrowse(key="BrowseExportFolder"),
+    ],
+    [
         sg.Text('Logging rate [Hz]'),
-        sg.InputText(size=(10, 1), key='logging_rate'),
+        sg.InputText(size=(5, 1), key='logging_rate'),
     ],
 ]
 
 keithley_row = [
     [
-        sg.T('Keithley2450 control', font='_ 14', justification='c', expand_x=True),
+        sg.Text('Device ID'),
     ],
     [
-        sg.Text('Device ID'),
         sg.InputText(size=(40, 1), key='KeithleyDeviceID', default_text="USB0::0x05E6::0x2450::04456958::INSTR"),
+    ],
+    [
+        sg.Push(),
         sg.Button('Connect Keithley2450', key='StartKeithley'),
+        sg.Push(),
     ],
     [
         sg.Checkbox('Use front terminals', key='FrontTerminals')
     ],
+]
+
+experiment_row = [
+    [
+        sg.Text('Experiment name'),
+    ],
+    [
+        sg.InputText(size=(40, 1), key='ExperimentName', disabled=True),
+    ],
     [
         sg.Text('Voltage range (comma seperate)'),
-        sg.InputText(size=(50, 1), key='KeithleyVoltages', disabled=True),
+    ],
+    [
+        sg.Multiline(size=(50, 3), key='KeithleyVoltages', disabled=True),
     ],
     [
         sg.Text('Dwell times (comma seperate)'),
-        sg.InputText(size=(50, 1), key='KeithleyDwellTimes', disabled=True),
+    ],
+    [
+        sg.Multiline(size=(50, 3), key='KeithleyDwellTimes', disabled=True),
     ],
 ]
 
 measurement_row = [
     [
-        sg.Button('Start image recording and logging', key='StartLogging', disabled=True),
+        sg.VPush(),
     ],
     [
-        sg.Button('Start voltage sweep', key='VoltageKeithley', disabled=True),
+        sg.Push(),
+        sg.Button('START DATA ACQUISITION', key='StartLogging', disabled=True, font=("Helvetica", 15), button_color=('white', '#283b5b')),
+        sg.Push(),
+    ],
+    [
+        sg.Push(),
+        sg.Button('START VOLTAGE SWEEP', key='VoltageKeithley', disabled=True, font=("Helvetica", 15), button_color=('white', '#283b5b')),
+        sg.Push(),
+    ],
+    [
+        sg.VPush(),
+    ],
+]
+
+
+left_col = [
+    [
+        sg.T(f'Electrodewetting Control', font='_ 18', justification='c', expand_x=True),
+    ],
+    [
+        sg.Frame('Camera control', col1, size=(300, 180))
+    ],
+    [
+        sg.Frame('Keithley control', keithley_row, size=(300, 140))
+    ],
+    [
+        sg.Frame('Save settings', first_row, size=(300, 130)),
+    ],
+    [
+        sg.Frame('Experiment settings', experiment_row, size=(300, 250))
+    ],
+    # [
+    #     sg.Text("", size=(1, 1))
+    # ],
+    [
+        sg.Button('Set settings as default'),
+        sg.Push(),
+        sg.Button('Help'),
+        sg.Button('Exit'),
     ]
 ]
 
 layout = [
     [
-        sg.Column(col2, element_justification='c')
-    ],
-    [
-        sg.HSeparator(),
-    ],
-    [
-        sg.Column(col1),
+        sg.Column(left_col, vertical_alignment='top'),
         sg.VSeparator(),
-        sg.Column(keithley_row)
+        sg.Column(col2, element_justification='c', size=(1200, 800))
     ],
     [
         sg.HSeparator(),
     ],
     [
-        sg.Column(first_row),
-        sg.VSeparator(),
-        sg.Column(measurement_row, justification='c'),
+        sg.Column([
+            [
+                sg.Frame('Output', output_row, size=(1100, 150))
+            ],
+        ]),
+        sg.Column([
+            [
+                sg.Frame('Experiment control', measurement_row, size=(400, 130)),
+            ],
+            [
+                sg.T(f'{AUTHOR} | v{VERSION} | Build {BUILD_DATE} | {GITHUB}', font='_ 8', justification='c', expand_x=True),
+            ]
+        ]),
     ],
-    [
-        sg.HSeparator(),
-    ],
-    [
-        output_row,
-    ],
-    [
-        sg.Button('Help'),
-        sg.Push(),
-        sg.Button('Set settings as default'),
-        sg.Button('Exit'),
-    ],
-[
-        sg.T(f'{AUTHOR} | Version {VERSION} | Build {BUILD_DATE} | {GITHUB}', font='_ 8', justification='c', expand_x=True),
-    ],
-
 ]
 
 
@@ -220,7 +259,7 @@ def updateImage(camera):
 
             image = converter.Convert(grabResult)
             img = image.GetArray()
-            img = image_resize(img, width=950)
+            img = image_resize(img, width=1300)
             imgbytes = cv2.imencode('.png', img)[1].tobytes()  # ditto
 
             window['-IMAGE-'].update(data=imgbytes)
@@ -248,7 +287,7 @@ def SaveAsDefault():
     }
     with open('EDWControlSettings.json', 'w') as f:
         json.dump(data, f, indent=2)
-        print(f"{datetime.now().strftime('%H:%M:%S')} OK        Settings saved as defaults to 'EDWControlSettings.json'.")
+        print(f"{datetime.now().strftime('%H:%M:%S')} OK        Settings saved as defaults to 'EDWControlSettings.json' (at program location).")
 
 def SetInitialValues():
     print('----- Electrodewetting Control -----')
@@ -270,7 +309,7 @@ def SetInitialValues():
             window["logging_rate"].update(settings['logging_rate'])
             window["ExportFolder"].update(settings['ExportFolder'])
             window["SavingFormat"].update(settings['SavingFormat'])
-            print(f"{datetime.now().strftime('%H:%M:%S')} OK        Default settings loaded from 'EDWControlSettings.json'.")
+            print(f"{datetime.now().strftime('%H:%M:%S')} OK        Default settings loaded from 'EDWControlSettings.json' (at program location).")
     except:
         print(f"{datetime.now().strftime('%H:%M:%S')} WARNING   No default settings found. Press 'Set settings as default' to create default settings.")
 
@@ -284,7 +323,8 @@ settings = {
     'Gain': 0,
 }
 
-window = sg.Window(f"Electrodewetting Control {VERSION}", layout, finalize=True, icon=icon_path, grab_anywhere=True)
+extratitle = " !! DEMO MODE !!" if DEMO_MODE else ""
+window = sg.Window(f"Electrodewetting Control {VERSION}{extratitle}", layout, finalize=True, icon=icon_path, grab_anywhere=True)
 SetInitialValues()
 
 updateInterval = 1
@@ -317,23 +357,28 @@ while True:
         if not keithleyStarted:
             print("Keithley2450Control program")
             print('Checking available devices ...')
-            rm = pyvisa.ResourceManager()  # should use Keysight by default
-            print(f"Found devices: {rm.list_resources()}. Needs device {values['KeithleyDeviceID']}")
+            if not DEMO_MODE:
+                rm = pyvisa.ResourceManager()  # should use Keysight by default
+                print(f"Found devices: {rm.list_resources()}. Needs device {values['KeithleyDeviceID']}")
             window.Refresh()
             try:
-                keithley = Keithley2450(values['KeithleyDeviceID'])
+                if not DEMO_MODE:
+                    keithley = Keithley2450(values['KeithleyDeviceID'])
                 print('Connection successfull.')
-                window.Refresh()
-                keithley.reset()
-                if values['FrontTerminals']:
-                    keithley.use_front_terminals()
-                keithley.measure_current()
-                keithley.enable_source()
-                window['VoltageKeithley'].Update(disabled=False)
+                if not DEMO_MODE:
+                    window.Refresh()
+                    keithley.reset()
+                    if values['FrontTerminals']:
+                        keithley.use_front_terminals()
+                    keithley.measure_current()
+                    keithley.enable_source()
+                window['VoltageKeithley'].Update(disabled=False, button_color=('white', 'green'))
+                window['StartKeithley'].Update('Disconnect Keithley')
                 print('Keithley connected.')
                 window.Refresh()
                 if cameraStarted:
-                    window['StartLogging'].Update(disabled=False)
+                    window['StartLogging'].Update(disabled=False, button_color=('white', 'green'))
+                    window['VoltageKeithley'].Update(disabled=False, button_color=('white', 'green'))
             except:
                 print("Unable to connect to the Keithley 2450.")
                 window.Refresh()
@@ -349,8 +394,8 @@ while True:
             window['FrontTerminals'].Update(disabled=False)
             window['KeithleyDeviceID'].Update(disabled=False)
             keithleyStarted = False
-            window['StartLogging'].Update(disabled=True)
-            window['VoltageKeithley'].Update(disabled=True)
+            window['StartLogging'].Update(disabled=True, button_color=('white', '#283b5b'))
+            window['VoltageKeithley'].Update(disabled=True, button_color=('white', '#283b5b'))
             print('Keithley disconnected.')
             window.Refresh()
 
@@ -363,7 +408,7 @@ while True:
                 continue
             window['KeithleyVoltages'].Update(disabled=True)
             window['KeithleyDwellTimes'].Update(disabled=True)
-            window['VoltageKeithley'].Update('Stop voltage sweep')
+            window['VoltageKeithley'].Update('STOP VOLTAGE SWEEP', button_color=('white', 'red'))
             keithleyRamp = True
             keithleyDwellIdx = 0
             currentDwellTime = 0  # make sure we start immediately
@@ -372,9 +417,10 @@ while True:
         else:
             window['KeithleyVoltages'].Update(disabled=False)
             window['KeithleyDwellTimes'].Update(disabled=False)
-            window['VoltageKeithley'].Update('Start voltage sweep')
+            window['VoltageKeithley'].Update('START VOLTAGE SWEEP', button_color=('white', 'green'))
             currentVoltage = 0
-            keithley.source_voltage = 0
+            if not DEMO_MODE:
+                keithley.source_voltage = 0
             keithleyRamp = False
             print('Voltage sweep stopped')
 
@@ -382,17 +428,19 @@ while True:
         if keithleyDwellIdx >= len(KeithleyVoltages):  # if this was already the last voltage, stop
             window['KeithleyVoltages'].Update(disabled=False)
             window['KeithleyDwellTimes'].Update(disabled=False)
-            window['VoltageKeithley'].Update('Start voltage sweep')
+            window['VoltageKeithley'].Update('START VOLTAGE SWEEP', button_color=('white', 'green'))
             keithleyRamp = False
             currentVoltage = 0
-            keithley.source_voltage = 0
+            if not DEMO_MODE:
+                keithley.source_voltage = 0
             print('Voltage ramping ended')
         else:
             currentVoltage = KeithleyVoltages[keithleyDwellIdx]
             currentDwellTime = KeithleyDwellTimes[keithleyDwellIdx]
             print(f'{keithleyDwellIdx}/{len(KeithleyVoltages)} -  Voltage set to {currentVoltage}V.')
-            keithley.source_voltage = currentVoltage
-            keithley.current
+            if not DEMO_MODE:
+                keithley.source_voltage = currentVoltage
+                keithley.current
             tVoltagechangeKeithley = time.time()
             keithleyDwellIdx = keithleyDwellIdx + 1
 
@@ -405,7 +453,8 @@ while True:
         settings['ExposureTime'] = int(values['ExposureTime'])
         settings['Gain'] = int(values['Gain'])
         window.Refresh()
-        updateCameraSetting(camera, settings)
+        if not DEMO_MODE:
+            updateCameraSetting(camera, settings)
 
     if event == 'MaxExposureTime':
         window['ExposureTime'].Update(int(values['logging_rate'])*1000)
@@ -416,11 +465,13 @@ while True:
     if event == "StartCamera":
         if not cameraStarted:
             try:
-                camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
-                camera.Open()
-                print("Using device ", camera.GetDeviceInfo().GetModelName())
+                if not DEMO_MODE:
+                    camera = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+                    camera.Open()
+                    print("Using device ", camera.GetDeviceInfo().GetModelName())
                 window.Refresh()
-                updateImage(camera)
+                if not DEMO_MODE:
+                    updateImage(camera)
                 window['StartCamera'].Update('Disconnect camera')
                 cameraStarted = True
                 window['ApplySettings'].Update(disabled=False)
@@ -431,11 +482,13 @@ while True:
                 print('Camera started')
                 window.Refresh()
                 if keithleyStarted:
-                    window['StartLogging'].Update(disabled=False)
+                    window['StartLogging'].Update(disabled=False, button_color=('white', 'green'))
+                    window['VoltageKeithley'].Update(disabled=False, button_color=('white', 'green'))
             except Exception as err:
                 print('ERROR     Cannot connect to camera. ', err)
         else:
-            camera.Close()
+            if not DEMO_MODE:
+                camera.Close()
             cameraStarted = False
             window['ApplySettings'].Update(disabled=True)
             window['ExposureTime'].Update(disabled=True)
@@ -445,10 +498,12 @@ while True:
             window['StartCamera'].Update('Connect camera')
             print('Camera stopped')
             window.Refresh()
-            window['StartLogging'].Update(disabled=True)
+            window['StartLogging'].Update(disabled=True, button_color=('white', '#283b5b'))
+            window['VoltageKeithley'].Update(disabled=True, button_color=('white', '#283b5b'))
 
     if cameraStarted and time.time() - tUpdate > updateInterval:
-        updateImage(camera)
+        if not DEMO_MODE:
+            updateImage(camera)
         t = time.time()
 
 
@@ -457,10 +512,29 @@ while True:
             if not outputFolder:
                 print('Select an output folder first')
                 continue
-            logging_rate = float(values['logging_rate'])
+
+            if not os.path.exists(outputFolder):
+                os.makedirs(outputFolder)
+                print(f"Output folder {outputFolder} created.")
+
             experimentName = values['ExperimentName']
+            outputFolderImages = os.path.join(outputFolder, experimentName + '_rawimages')
+            if not os.path.exists(outputFolderImages):
+                os.makedirs(outputFolderImages)
+
+            logging_rate = float(values['logging_rate'])
+
             filenameKeithley = os.path.join(outputFolder, f"Keithley_Logfile_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
-            window['StartLogging'].Update('Stop logging')
+            window['StartLogging'].Update('STOP DATA ACQUISITION', button_color=('white', 'red'))
+            window['StartCamera'].Update(disabled=True)
+            window['StartKeithley'].Update(disabled=True)
+            window['KeithleyVoltages'].Update(disabled=True)
+            window['KeithleyDwellTimes'].Update(disabled=True)
+            window["ExperimentName"].update(disabled=True)
+            window['ExportFolder'].update(disabled=True)
+            window['BrowseExportFolder'].update(disabled=True)
+            window['logging_rate'].update(disabled=True)
+            window['SavingFormat'].update(disabled=True)
             f = open(filenameKeithley, 'w')
             f.write("datetimestamp image, datetimestamp keithley, current (A), voltage (V), set voltage (V)\n")
             print(f"Created log file '{filenameKeithley}'.")
@@ -469,7 +543,17 @@ while True:
             print('Logging started')
             window.Refresh()
         else:
-            window['StartLogging'].Update('Start logging')
+            window['StartLogging'].Update('START DATA ACQUISITION', button_color=('white', 'green'))
+            window['VoltageKeithley'].Update('START VOLTAGE SWEEP', button_color=('white', 'green'))
+            window['StartCamera'].Update(disabled=False)
+            window['StartKeithley'].Update(disabled=False)
+            window['KeithleyVoltages'].Update(disabled=False)
+            window['KeithleyDwellTimes'].Update(disabled=False)
+            window["ExperimentName"].update(disabled=False)
+            window['ExportFolder'].update(disabled=False)
+            window['BrowseExportFolder'].update(disabled=False)
+            window['logging_rate'].update(disabled=False)
+            window['SavingFormat'].update(disabled=False)
             loggingAll = False
             f.close()
             print('Logging stopped')
@@ -477,32 +561,34 @@ while True:
     if loggingAll and time.time() - tLogging > logging_rate:
         timestamp1 = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
 
-        img = pylon.PylonImage()
-        camera.StartGrabbing()
-        with camera.RetrieveResult(2000) as result:
-            img.AttachGrabResultBuffer(result)
-            if values['SavingFormat'] == 'TIFF':
-                img.Save(pylon.ImageFileFormat_Tiff, os.path.join(outputFolder, f"{experimentName}_{timestamp1}.tiff"))
-            elif values['SavingFormat'] == 'JPEG 100':
-                ipo = pylon.ImagePersistenceOptions()
-                ipo.SetQuality(100)
-                img.Save(pylon.ImageFileFormat_Jpeg, os.path.join(outputFolder, f"{experimentName}_{timestamp1}.jpeg"), ipo)
-            elif values['SavingFormat'] == 'JPEG 80':
-                ipo = pylon.ImagePersistenceOptions()
-                ipo.SetQuality(80)
-                img.Save(pylon.ImageFileFormat_Jpeg, os.path.join(outputFolder, f"{experimentName}_{timestamp1}.jpeg"), ipo)
-            elif values['SavingFormat'] == 'JPEG 50':
-                ipo = pylon.ImagePersistenceOptions()
-                ipo.SetQuality(50)
-                img.Save(pylon.ImageFileFormat_Jpeg, os.path.join(outputFolder, f"{experimentName}_{timestamp1}.jpeg"), ipo)
-            elif values['SavingFormat'] == 'PNG':
-                img.Save(pylon.ImageFileFormat_Png, os.path.join(outputFolder, f"{experimentName}_{timestamp1}.png"))
-            img.Release()
-        camera.StopGrabbing()
+        if not DEMO_MODE:
+            img = pylon.PylonImage()
+            camera.StartGrabbing()
+            with camera.RetrieveResult(2000) as result:
+                img.AttachGrabResultBuffer(result)
+                if values['SavingFormat'] == 'TIFF':
+                    img.Save(pylon.ImageFileFormat_Tiff, os.path.join(outputFolderImages, f"{experimentName}_{timestamp1}.tiff"))
+                elif values['SavingFormat'] == 'JPEG 100':
+                    ipo = pylon.ImagePersistenceOptions()
+                    ipo.SetQuality(100)
+                    img.Save(pylon.ImageFileFormat_Jpeg, os.path.join(outputFolderImages, f"{experimentName}_{timestamp1}.jpeg"), ipo)
+                elif values['SavingFormat'] == 'JPEG 80':
+                    ipo = pylon.ImagePersistenceOptions()
+                    ipo.SetQuality(80)
+                    img.Save(pylon.ImageFileFormat_Jpeg, os.path.join(outputFolderImages, f"{experimentName}_{timestamp1}.jpeg"), ipo)
+                elif values['SavingFormat'] == 'JPEG 50':
+                    ipo = pylon.ImagePersistenceOptions()
+                    ipo.SetQuality(50)
+                    img.Save(pylon.ImageFileFormat_Jpeg, os.path.join(outputFolderImages, f"{experimentName}_{timestamp1}.jpeg"), ipo)
+                elif values['SavingFormat'] == 'PNG':
+                    img.Save(pylon.ImageFileFormat_Png, os.path.join(outputFolderImages, f"{experimentName}_{timestamp1}.png"))
+                img.Release()
+            camera.StopGrabbing()
 
         timestamp2 = datetime.now().strftime('%Y%m%d_%H%M%S_%f')  # redo, so more accurate in log file
-        print(f"{timestamp1}, {timestamp2}, {keithley.current}, {keithley.voltage}, {currentVoltage}")
-        f.write(f"{timestamp1}, {timestamp2}, {keithley.current}, {keithley.voltage}, {currentVoltage}\n")
+        if not DEMO_MODE:
+            print(f"{timestamp1}, {timestamp2}, {keithley.current}, {keithley.voltage}, {currentVoltage}")
+            f.write(f"{timestamp1}, {timestamp2}, {keithley.current}, {keithley.voltage}, {currentVoltage}\n")
 
         tLogging = time.time()
 

@@ -1,11 +1,12 @@
 {
-  "fps_output": "1",
   "ExposureTime": "5000",
   "Gain": "10",
   "ExperimentName": "test",
-  "KeithleyReadOutRate": "",
-  "KeithleyVoltages": "",
-  "KeithleyDwellTimes": "",
+  "KeithleyVoltages": "0,1,0,1",
+  "KeithleyDwellTimes": "10,20,30,40",
   "FrontTerminals": true,
-  "KeithleyDeviceID": "USB0::0x05E6::0x2450::04456958::INSTR"
+  "KeithleyDeviceID": "USB0::0x05E6::0x2450::04456958::INSTR",
+  "logging_rate": "1",
+  "ExportFolder": "C:/Users/HOEKHJ/Documents",
+  "SavingFormat": "JPEG 100"
 }
